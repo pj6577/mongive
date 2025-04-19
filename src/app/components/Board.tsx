@@ -284,7 +284,7 @@ export default function Board() {
   };
 
   const handleLike = async (postId: number) => {
-    if (!walletClient) return
+    if (!walletClient || !publicClient) return
 
     try {
       const { request } = await publicClient.simulateContract({
