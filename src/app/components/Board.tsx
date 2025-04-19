@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAccount, useChainId, useWalletClient, usePublicClient } from 'wagmi'
+import { useAccount, useChainId, useWalletClient, usePublicClient, PublicClient } from 'wagmi'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { BOARD_ADDRESS, MON_TOKEN_ADDRESS } from '../constants/addresses'
@@ -22,7 +22,8 @@ export default function Board() {
   const { address } = useAccount()
   const chainId = useChainId()
   const { data: walletClient } = useWalletClient()
-  const publicClient = usePublicClient()
+  const client = usePublicClient()
+  const publicClient = client as PublicClient
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreatingPost, setIsCreatingPost] = useState(false)
@@ -172,13 +173,16 @@ export default function Board() {
 
       while (retries > 0) {
         try {
+          if (!publicClient) {
+            throw new Error('Public client is not initialized');
+          }
+          
           const { request } = await publicClient.simulateContract({
             address: BOARD_ADDRESS,
             abi: BOARD_ABI,
             functionName: 'setNickname',
-            args: [nickname],
-            account: address
-          })
+            args: [nickname]
+          });
 
           const hash = await walletClient.writeContract(request)
           await publicClient.waitForTransactionReceipt({ hash })
