@@ -117,7 +117,7 @@ export function DonateButton() {
   }
 
   const progress = (totalDonated / GOAL_AMOUNT) * 100
-  const currentEffect = SPECIAL_EFFECTS[amount as keyof typeof SPECIAL_EFFECTS] || SPECIAL_EFFECTS['0.1']
+  const currentEffect = SPECIAL_EFFECTS[amount as keyof typeof SPECIAL_EFFECTS] || SPECIAL_EFFECTS['1']
 
   return (
     <>
