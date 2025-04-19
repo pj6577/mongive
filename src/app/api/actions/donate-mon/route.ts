@@ -53,7 +53,7 @@ export const GET = async (req: Request) => {
         {
           type: "transaction",
           href: `/api/actions/donate-mon?amount={amount}`,
-          label: "기부하기",
+          label: "Donate",
           parameters: [
             {
               name: "amount",
@@ -93,7 +93,7 @@ export const POST = async (req: Request) => {
     const response: ActionPostResponse = {
       type: "transaction",
       transaction: transactionJson,
-      message: "MON 기부하기",
+      message: "MON Donate",
     };
 
     return new Response(JSON.stringify(response), {

@@ -10,16 +10,16 @@ import { createPortal } from 'react-dom'
 
 const GOAL_AMOUNT = 1.0 // MON
 const SPECIAL_EFFECTS = {
-  '0.1': { pieces: 700, emoji: '🌟' },
-  '0.05': { pieces: 500, emoji: '💝' },
-  '0.01': { pieces: 300, emoji: '✨' },
+  '10': { pieces: 700, emoji: '🌟' },
+  '5': { pieces: 500, emoji: '💝' },
+  '1': { pieces: 300, emoji: '✨' },
 }
 
 export function DonateButton() {
   const { isConnected } = useAccount()
   const { sendTransaction, isPending, isSuccess, reset } = useSendTransaction()
   const [isOpen, setIsOpen] = useState(false)
-  const [amount, setAmount] = useState('0.01')
+  const [amount, setAmount] = useState('0.1')
   const [error, setError] = useState<string | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -27,7 +27,7 @@ export function DonateButton() {
   const [sparklePosition, setSparklePosition] = useState({ x: 0, y: 0 })
   const [showSparkle, setShowSparkle] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
-  const [displayAmount, setDisplayAmount] = useState('0.01')
+  const [displayAmount, setDisplayAmount] = useState('0.1')
   const [hasDonated, setHasDonated] = useState(false)
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export function DonateButton() {
 
   const spinAnimation = async () => {
     setIsSpinning(true)
-    const amounts = ['0.01', '0.05', '0.1']
+    const amounts = ['0.1', '1', '10']
     const spins = 10
     const delay = 100
 
@@ -117,7 +117,7 @@ export function DonateButton() {
   }
 
   const progress = (totalDonated / GOAL_AMOUNT) * 100
-  const currentEffect = SPECIAL_EFFECTS[amount as keyof typeof SPECIAL_EFFECTS] || SPECIAL_EFFECTS['0.01']
+  const currentEffect = SPECIAL_EFFECTS[amount as keyof typeof SPECIAL_EFFECTS] || SPECIAL_EFFECTS['0.1']
 
   return (
     <>
@@ -150,7 +150,7 @@ export function DonateButton() {
           whileTap={{ scale: 0.95 }}
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
-            <span>기부하기</span>
+            <span>Donate</span>
             <span className="text-xl transition-transform duration-300 group-hover:translate-x-1">
               💝
             </span>
@@ -189,7 +189,7 @@ export function DonateButton() {
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Dialog.Panel className="mx-auto max-w-sm rounded bg-gray-800 p-6">
             <Dialog.Title className="text-lg font-medium text-white mb-4">
-              MON 기부하기
+              MON Donate
             </Dialog.Title>
             
             <div className="space-y-4">
@@ -229,15 +229,16 @@ export function DonateButton() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  직접 입력하기
+                  Input Amount
                 </label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-700 rounded text-white"
-                  min="0.01"
-                  step="0.01"
+                  min="0.1"
+                  max="10"
+                  step="0.1"
                   disabled={isPending}
                 />
               </div>
@@ -252,14 +253,14 @@ export function DonateButton() {
                   className="px-4 py-2 text-gray-300 hover:text-white"
                   disabled={isPending}
                 >
-                  취소
+                  Cancel
                 </button>
                 <button
                   onClick={handleDonate}
                   className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
                   disabled={isPending}
                 >
-                  {isPending ? '처리 중...' : '기부하기'}
+                  {isPending ? '처리 중...' : 'Donate'}
                 </button>
               </div>
             </div>
