@@ -164,9 +164,117 @@ export default function Home() {
             </div>
 
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-4">Loading posts...</p>
+              <div className="flex flex-col items-center justify-center py-12 space-y-8">
+                <motion.div 
+                  className="relative w-32 h-32"
+                  animate={{
+                    rotate: 360
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                >
+                  {/* Monad Logo */}
+                  <motion.img
+                    src="/Monad Logo - Inverted - Stacked Logo.svg"
+                    alt="Monad Logo"
+                    className="w-24 h-24 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                    animate={{
+                      scale: [1, 1.1, 1],
+                      opacity: [0.8, 1, 0.8]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 border-4 rounded-full"
+                    style={{ borderColor: "#836EF9" }}
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [1, 0.5, 1]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                </motion.div>
+                
+                <div className="text-center space-y-2">
+                  <motion.div 
+                    className="text-lg font-medium"
+                    style={{ color: "#836EF9" }}
+                    animate={{
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    Connecting to the Monad board
+                  </motion.div>
+                  <motion.div
+                    className="text-sm"
+                    style={{ color: "#836EF9", opacity: 0.8 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.8 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    Connecting to the future of monad
+                  </motion.div>
+                  <motion.div
+                    className="text-sm font-mono"
+                    style={{ color: "#836EF9", opacity: 0.7 }}
+                    animate={{
+                      opacity: [0.4, 0.7, 0.4]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    Data Loading
+                  </motion.div>
+                  <motion.div 
+                    className="flex justify-center space-x-1 mt-1"
+                    animate={{
+                      y: [0, -3, 0]
+                    }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      repeatType: "reverse"
+                    }}
+                  >
+                    {[..."•••"].map((dot, i) => (
+                      <motion.span
+                        key={i}
+                        style={{ color: "#836EF9" }}
+                        className="text-2xl"
+                        initial={{ opacity: 0.3 }}
+                        animate={{
+                          opacity: [0.3, 1, 0.3]
+                        }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          delay: i * 0.2
+                        }}
+                      >
+                        {dot}
+                      </motion.span>
+                    ))}
+                  </motion.div>
+                </div>
               </div>
             ) : (
               <div className="space-y-6">

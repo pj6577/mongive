@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAccount, useChainId, useWalletClient, usePublicClient } from 'wagmi'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { BOARD_ADDRESS, MON_TOKEN_ADDRESS } from '../constants/addresses'
 import { BOARD_ABI, ERC20_ABI } from '../constants/abis'
@@ -10,7 +10,7 @@ import { ethers } from 'ethers'
 import { PublicClient } from 'viem'
 
 interface Post {
-  author: string
+  author: `0x${string}`
   authorNickname: string
   title: string
   content: string
@@ -26,6 +26,10 @@ export default function Board() {
   const publicClient = usePublicClient()
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [currentPage, setCurrentPage] = useState(0)
+  const POSTS_PER_PAGE = 10
   const [isCreatingPost, setIsCreatingPost] = useState(false)
   const [isSettingNickname, setIsSettingNickname] = useState(false)
   const [newPost, setNewPost] = useState({
@@ -65,82 +69,116 @@ export default function Board() {
     }
   };
 
-  const loadPosts = async () => {
+  const loadPosts = async (page = 0, isInitial = true) => {
     if (!publicClient) {
       console.log('Waiting for publicClient...');
       return;
     }
     
     try {
-      setIsLoading(true);
-      let retries = 3;
+      if (isInitial) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+      
+      // 게시글 개수를 가져옵니다
+      const count = await publicClient.readContract({
+        address: BOARD_ADDRESS,
+        abi: BOARD_ABI,
+        functionName: 'getPostCount'
+      }) as bigint;
 
-      while (retries > 0) {
-        try {
-          // 먼저 게시글 개수를 가져옵니다
-          const count = await publicClient.readContract({
-            address: BOARD_ADDRESS,
-            abi: BOARD_ABI,
-            functionName: 'getPostCount'
-          }) as bigint;
+      console.log('Total posts:', Number(count));
 
-          const loadedPosts: Post[] = [];
-          
-          // 각 게시글을 순차적으로 불러옵니다
-          for (let i = 0; i < Number(count); i++) {
-            try {
-              const result = await publicClient.readContract({
-                address: BOARD_ADDRESS,
-                abi: BOARD_ABI,
-                functionName: 'getPost',
-                args: [BigInt(i)]
-              });
+      const totalPosts = Number(count);
+      const startIndex = Math.max(0, totalPosts - ((page + 1) * POSTS_PER_PAGE));
+      const endIndex = Math.max(0, totalPosts - (page * POSTS_PER_PAGE));
+      const indices = Array.from(
+        { length: Math.min(POSTS_PER_PAGE, endIndex - startIndex) },
+        (_, i) => startIndex + i
+      );
 
-              loadedPosts.push({
-                author: result[0],
-                authorNickname: result[1],
-                title: result[2],
-                content: result[3],
-                timestamp: result[4],
-                likes: result[5],
-                monAmount: result[6]
-              });
+      console.log('Loading posts from index', startIndex, 'to', endIndex);
 
-              // 각 요청 사이에 딜레이를 줍니다
-              await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (error: any) {
-              console.error(`Error loading post ${i}:`, error);
-              if (error.message?.includes('request limit reached')) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            }
+      if (indices.length === 0) {
+        setHasMore(false);
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        return;
+      }
+
+      // 병렬로 게시글을 불러옵니다 (5개씩 배치 처리)
+      const loadedPosts: Post[] = [];
+      for (let i = 0; i < indices.length; i += 5) {
+        const batchIndices = indices.slice(i, i + 5);
+        const batchPromises = batchIndices.map(async (index) => {
+          try {
+            const result = await publicClient.readContract({
+              address: BOARD_ADDRESS,
+              abi: BOARD_ABI,
+              functionName: 'getPost',
+              args: [BigInt(index)]
+            });
+
+            return {
+              author: result[0],
+              authorNickname: result[1],
+              title: result[2],
+              content: result[3],
+              timestamp: result[4],
+              likes: result[5],
+              monAmount: result[6]
+            };
+          } catch (error: any) {
+            console.error(`Error loading post ${index}:`, error);
+            return null;
           }
+        });
 
-          // 모나드 토큰 양에 따라 정렬
-          loadedPosts.sort((a, b) => Number(b.monAmount - a.monAmount));
-          setPosts(loadedPosts);
-          break;
-        } catch (error: any) {
-          console.error('Error in loadPosts:', error);
-          if (error.message?.includes('request limit reached')) {
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              continue;
-            }
-          }
-          toast.error('게시글을 불러오는 중 오류가 발생했습니다');
-          break;
+        const results = await Promise.all(batchPromises);
+        const validPosts = results.filter((post): post is NonNullable<typeof post> => post !== null);
+        loadedPosts.push(...validPosts);
+
+        // 짧은 딜레이
+        if (i + 5 < indices.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
+
+      // 최신순으로 정렬
+      loadedPosts.sort((a, b) => Number(b.timestamp - a.timestamp));
+      
+      if (isInitial) {
+        setPosts(loadedPosts);
+      } else {
+        setPosts(prev => [...prev, ...loadedPosts]);
+      }
+
+      setHasMore(startIndex > 0);
+      setCurrentPage(page);
+    } catch (error: any) {
+      console.error('Error in loadPosts:', error);
+      toast.error('게시글을 불러오는 중 오류가 발생했습니다');
     } finally {
-      setIsLoading(false);
+      if (isInitial) {
+        setIsLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
+    }
+  };
+
+  const loadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadPosts(currentPage + 1, false);
     }
   };
 
   useEffect(() => {
     if (address && publicClient) {
       console.log('Initializing board...');
+      setIsLoading(true);
       loadPosts();
       loadUserNickname();
       loadMonBalance();
@@ -316,10 +354,111 @@ export default function Board() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-8">
+        <motion.div 
+          className="relative w-32 h-32"
+          animate={{
+            rotate: 360
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+        >
+          <motion.div
+            className="absolute inset-0 border-4 border-purple-500 rounded-full"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [1, 0.5, 1]
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div
+            className="absolute inset-2 border-4 border-pink-500 rounded-full"
+            animate={{
+              scale: [1.2, 1, 1.2],
+              opacity: [0.5, 1, 0.5]
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div
+            className="absolute inset-4 border-4 border-blue-500 rounded-full"
+            animate={{
+              rotate: -360
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+        </motion.div>
+        
+        <div className="text-center space-y-4">
+          <motion.h3 
+            className="text-2xl font-bold text-white"
+            animate={{
+              opacity: [0.5, 1, 0.5]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            게시글을 불러오는 중...
+          </motion.h3>
+          <motion.div 
+            className="text-purple-400"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1 }}
+          >
+            잠시만 기다려주세요 🚀
+          </motion.div>
+        </div>
+
+        <motion.div 
+          className="flex space-x-2"
+          animate={{
+            y: [0, -10, 0]
+          }}
+          transition={{
+            duration: 1,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        >
+          {[..."LOADING"].map((letter, i) => (
+            <motion.span
+              key={i}
+              className="text-xl font-bold text-white"
+              animate={{
+                y: [0, -10, 0],
+                color: ["#9333ea", "#ec4899", "#9333ea"]
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                delay: i * 0.1,
+                ease: "easeInOut"
+              }}
+            >
+              {letter}
+            </motion.span>
+          ))}
+        </motion.div>
       </div>
-    )
+    );
   }
 
   return (
@@ -410,37 +549,60 @@ export default function Board() {
         {posts.length === 0 ? (
           <p className="text-gray-400">작성된 게시글이 없습니다.</p>
         ) : (
-          posts.map((post, postId) => (
-            <motion.div
-              key={postId}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-800 rounded-lg p-6"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-bold text-white">{post.title}</h3>
-                  <p className="text-gray-400 mt-1">{post.content}</p>
-                </div>
-                <div className="text-sm text-gray-400">
-                  <div>작성자: {post.authorNickname || post.author.slice(0, 6)}...{post.author.slice(-4)}</div>
-                  <div>작성일: {formatDate(post.timestamp)}</div>
-                  <div className="text-purple-400 mt-1">
-                    할당된 MON: {ethers.formatEther(post.monAmount)} MON
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleLike(postId)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+          <>
+            <div className="space-y-6">
+              {posts.map((post, postId) => (
+                <motion.div
+                  key={postId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gray-800 rounded-lg p-6"
                 >
-                  좋아요 ({Number(post.likes)})
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{post.title}</h3>
+                      <p className="text-gray-400 mt-1">{post.content}</p>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      <div>작성자: {post.authorNickname || post.author.slice(0, 6)}...{post.author.slice(-4)}</div>
+                      <div>작성일: {formatDate(post.timestamp)}</div>
+                      <div className="text-purple-400 mt-1">
+                        할당된 MON: {ethers.formatEther(post.monAmount)} MON
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleLike(postId)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                    >
+                      좋아요 ({Number(post.likes)})
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            
+            {hasMore && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isLoadingMore ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin"></div>
+                      <span>로딩 중...</span>
+                    </div>
+                  ) : (
+                    '더 보기'
+                  )}
                 </button>
               </div>
-            </motion.div>
-          ))
+            )}
+          </>
         )}
       </div>
     </div>
