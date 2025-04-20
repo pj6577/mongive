@@ -495,26 +495,40 @@ export default function Board() {
         <h2 className="text-2xl font-bold text-white mb-4">새 게시글 작성</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">제목 (최대 50자)</label>
-            <input
-              type="text"
-              value={newPost.title}
-              onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-700 rounded text-white"
-              placeholder="제목을 입력하세요"
-              maxLength={50}
-            />
+            <label className="block text-sm font-medium text-gray-300 mb-1">제목 (최대 30자)</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={newPost.title}
+                onChange={(e) => {
+                  const value = e.target.value.slice(0, 30);
+                  setNewPost({ ...newPost, title: value });
+                }}
+                className="w-full px-3 py-2 bg-gray-700 rounded text-white pr-16"
+                placeholder="제목을 입력하세요"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                {newPost.title.length}/30
+              </span>
+            </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">내용 (최대 500자)</label>
-            <textarea
-              value={newPost.content}
-              onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-700 rounded text-white"
-              placeholder="내용을 입력하세요"
-              rows={4}
-              maxLength={500}
-            />
+            <label className="block text-sm font-medium text-gray-300 mb-1">내용 (최대 200자)</label>
+            <div className="relative">
+              <textarea
+                value={newPost.content}
+                onChange={(e) => {
+                  const value = e.target.value.slice(0, 200);
+                  setNewPost({ ...newPost, content: value });
+                }}
+                className="w-full px-3 py-2 bg-gray-700 rounded text-white pr-16"
+                placeholder="내용을 입력하세요"
+                rows={4}
+              />
+              <span className="absolute right-3 bottom-3 text-sm text-gray-400">
+                {newPost.content.length}/200
+              </span>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">MON 토큰 할당량</label>
@@ -536,8 +550,8 @@ export default function Board() {
           </div>
           <button
             onClick={handleCreatePost}
-            disabled={isCreatingPost}
-            className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
+            disabled={isCreatingPost || !newPost.title.trim() || !newPost.content.trim()}
+            className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isCreatingPost ? '작성 중...' : '게시글 작성'}
           </button>

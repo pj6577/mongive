@@ -34,9 +34,18 @@ export default function Home() {
   const router = useRouter()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [newPost, setNewPost] = useState({
+    title: '',
+    content: '',
+    monAmount: '0'
+  })
 
   // 추천 기능
   const { writeContract: likePost, isPending: isLiking } = useContractWrite()
+
+  // 제목과 내용의 최대 길이 상수
+  const MAX_TITLE_LENGTH = 20
+  const MAX_CONTENT_LENGTH = 100
 
   const handleSwapSuccess = (txHash: string, from: string, to: string, value: string) => {
     setSwapTxHash(txHash)
@@ -206,10 +215,31 @@ export default function Home() {
                   />
                 </motion.div>
                 
-                <div className="text-center space-y-2">
-                  <motion.div 
-                    className="text-lg font-medium"
+                <div className="text-center space-y-4">
+                  <motion.h3 
+                    className="text-2xl font-bold"
                     style={{ color: "#836EF9" }}
+                    animate={{
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    Connecting to the Monad board 🌸
+                  </motion.h3>
+                  <motion.div 
+                    className="text-gray-400"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1 }}
+                  >
+                    Connecting to the future of monad
+                  </motion.div>
+                  <motion.div 
+                    className="text-sm text-gray-500"
                     animate={{
                       opacity: [0.5, 1, 0.5]
                     }}
@@ -219,60 +249,7 @@ export default function Home() {
                       ease: "easeInOut"
                     }}
                   >
-                    Connecting to the Monad board
-                  </motion.div>
-                  <motion.div
-                    className="text-sm"
-                    style={{ color: "#836EF9", opacity: 0.8 }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.8 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    Connecting to the future of monad
-                  </motion.div>
-                  <motion.div
-                    className="text-sm font-mono"
-                    style={{ color: "#836EF9", opacity: 0.7 }}
-                    animate={{
-                      opacity: [0.4, 0.7, 0.4]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
                     Data Loading
-                  </motion.div>
-                  <motion.div 
-                    className="flex justify-center space-x-1 mt-1"
-                    animate={{
-                      y: [0, -3, 0]
-                    }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      repeatType: "reverse"
-                    }}
-                  >
-                    {[..."•••"].map((dot, i) => (
-                      <motion.span
-                        key={i}
-                        style={{ color: "#836EF9" }}
-                        className="text-2xl"
-                        initial={{ opacity: 0.3 }}
-                        animate={{
-                          opacity: [0.3, 1, 0.3]
-                        }}
-                        transition={{
-                          duration: 1,
-                          repeat: Infinity,
-                          delay: i * 0.2
-                        }}
-                      >
-                        {dot}
-                      </motion.span>
-                    ))}
                   </motion.div>
                 </div>
               </div>
@@ -309,6 +286,9 @@ export default function Home() {
                 ))}
               </div>
             )}
+
+            {/* 게시물 작성 폼 */}
+            
           </div>
         )}
       </div>
